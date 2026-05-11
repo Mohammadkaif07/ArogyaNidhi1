@@ -16,18 +16,13 @@ import {
   CheckCircle2, 
   AlertCircle,
   Home,
-  User,
   ShieldCheck,
   Phone,
-  FileText,
-  LogOut,
-  LogIn
+  FileText
 } from 'lucide-react';
 import { SCHEMES, HOSPITALS, Scheme } from './data';
-import { auth, loginWithGoogle, logout } from './firebase';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
-type View = 'welcome' | 'quiz' | 'results' | 'hospitals' | 'scheme-detail' | 'profile';
+type View = 'welcome' | 'quiz' | 'results' | 'hospitals' | 'scheme-detail';
 
 interface QuizState {
   income: number;
@@ -38,8 +33,6 @@ interface QuizState {
 }
 
 export default function App() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [currentView, setCurrentView] = useState<View>('welcome');
   const [quizStep, setQuizStep] = useState(0);
   const [quizData, setQuizData] = useState<QuizState>({
@@ -51,14 +44,6 @@ export default function App() {
   });
   const [selectedScheme, setSelectedScheme] = useState<Scheme | null>(null);
   const [searchDistrict, setSearchDistrict] = useState('');
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const eligibleSchemes = useMemo(() => {
     return SCHEMES.filter(scheme => {
@@ -138,56 +123,6 @@ export default function App() {
     h.name.toLowerCase().includes(searchDistrict.toLowerCase())
   );
 
-  const handleLogin = async () => {
-    try {
-      await loginWithGoogle();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setCurrentView('welcome');
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-stone-500 font-medium">Starting Arogya-Nidhi...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 bg-teal-600 rounded-3xl flex items-center justify-center text-white shadow-2xl mb-8">
-          <Heart size={40} />
-        </div>
-        <h1 className="text-3xl font-bold mb-4 text-stone-900 tracking-tight">Welcome to Arogya-Nidhi</h1>
-        <p className="text-stone-600 mb-10 max-w-sm leading-relaxed">
-          Sign up to securely check your health scheme eligibility and find nearby hospitals.
-        </p>
-        <button 
-          onClick={handleLogin}
-          className="w-full max-w-sm bg-white border border-stone-200 py-4 px-6 rounded-2xl flex items-center justify-center gap-3 font-bold hover:bg-stone-50 transition-all shadow-sm active:scale-95"
-        >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-          Continue with Google
-        </button>
-        <p className="mt-8 text-xs text-stone-400 max-w-xs leading-relaxed">
-          By continuing, you agree to our terms of service and recognize that this app provides information only.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#FDFCFB] font-sans text-stone-900 selection:bg-teal-100">
       {/* Navigation */}
@@ -202,9 +137,6 @@ export default function App() {
           <button onClick={() => setCurrentView('hospitals')} className={`p-2 rounded-lg transition-colors ${currentView === 'hospitals' ? 'bg-teal-50 text-teal-600' : 'hover:bg-stone-50'}`}>
             <MapPin size={22} />
           </button>
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-stone-200 cursor-pointer" onClick={() => setCurrentView('profile')}>
-            <img src={user.photoURL || ''} alt={user.displayName || 'User'} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-          </div>
         </div>
       </nav>
 
@@ -520,52 +452,6 @@ export default function App() {
             </motion.div>
           )}
 
-          {currentView === 'profile' && (
-            <motion.div 
-              key="profile"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="px-6 py-6 max-w-xl mx-auto"
-            >
-              <div className="bg-white rounded-3xl p-8 border border-stone-200 shadow-sm text-center mb-6">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-teal-50 mx-auto mb-6 shadow-xl">
-                  <img src={user.photoURL || ''} alt={user.displayName || 'User'} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                </div>
-                <h2 className="text-2xl font-bold text-stone-900 mb-1">{user.displayName}</h2>
-                <p className="text-stone-500 mb-6 font-medium">{user.email}</p>
-                
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-stone-50 p-4 rounded-2xl">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400 block mb-1">Status</span>
-                    <span className="text-teal-600 font-bold">Verified User</span>
-                  </div>
-                  <div className="bg-stone-50 p-4 rounded-2xl">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400 block mb-1">Joined</span>
-                    <span className="text-stone-900 font-bold">Today</span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={handleLogout}
-                  className="w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-4 rounded-2xl flex items-center justify-center gap-3 transition-all"
-                >
-                  <LogOut size={20} />
-                  Sign Out
-                </button>
-              </div>
-
-              <div className="bg-teal-50 border border-teal-100 rounded-2xl p-6">
-                <h3 className="font-bold text-teal-800 mb-2 flex items-center gap-2">
-                  <ShieldCheck size={20} />
-                  Privacy & Data
-                </h3>
-                <p className="text-teal-900/60 text-sm leading-relaxed">
-                  Your data is stored securely. We only use your basic profile information to personalize your health scheme eligibility results.
-                </p>
-              </div>
-            </motion.div>
-          )}
-
           {currentView === 'hospitals' && (
             <motion.div 
               key="hospitals"
@@ -710,13 +596,6 @@ export default function App() {
         >
           <MapPin size={22} />
           <span className="text-[10px] font-bold uppercase tracking-widest">Hospitals</span>
-        </button>
-        <button 
-          onClick={() => setCurrentView('profile')}
-          className={`flex flex-col items-center gap-1 ${currentView === 'profile' ? 'text-teal-600' : 'text-stone-400'}`}
-        >
-          <User size={22} className={currentView === 'profile' ? 'fill-teal-600/10' : ''} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Profile</span>
         </button>
       </div>
     </div>
